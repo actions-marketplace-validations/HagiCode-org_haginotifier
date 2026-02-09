@@ -30,6 +30,9 @@ jobs:
     name: Test Notification
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - id: notification
         uses: ./ # Uses action.yml from the current repository
         with:
