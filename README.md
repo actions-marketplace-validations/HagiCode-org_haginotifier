@@ -107,15 +107,24 @@ jobs:
 
 ## Setup
 
-### Option 1: Centralized Configuration (Recommended)
+### Option 1: Organization-level Secret (Recommended for GitHub Organizations)
 
-Configure the webhook URL once in the haginotifier repository, and all consuming repositories can reuse it without managing their own webhook URL.
+Configure the webhook URL once at the organization level, and all repositories within the organization can reuse it without managing their own webhook URL. This is the **recommended approach** for managing multiple repositories.
 
-**In the haginotifier repository:**
+**Prerequisites:**
+- You must be a member of a GitHub organization
+- You need organization admin permissions to configure organization secrets
 
-1. Go to Settings > Secrets and variables > Actions
-2. Create a new secret named `FEISHU_WEBHOOK_URL`
-3. Paste your Feishu Webhook URL as the value
+**To configure organization-level Secret:**
+
+1. Navigate to your organization's main page on GitHub
+2. Click on **Settings** tab
+3. In the left sidebar, select **Secrets and variables** > **Actions**
+4. Click **New repository secret**
+5. Name the secret `FEISHU_WEBHOOK_URL`
+6. Paste your Feishu Webhook URL as the value
+7. **Important**: Configure **Access settings** to select which repositories can use this secret
+8. Click **Add secret**
 
 **In consuming repositories:**
 
@@ -129,11 +138,19 @@ jobs:
       FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 ```
 
+**Benefits of Organization-level Secrets:**
+- Configure once, use across multiple repositories
+- Easier management - update the secret in one place
+- Official GitHub recommended approach
+- More secure with centralized control
+
 ### Option 2: Per-Repository Configuration
 
-Each repository manages its own webhook URL.
+Each repository manages its own webhook URL. This is suitable for:
+- Personal accounts without organization access
+- Repositories that need different webhook URLs
 
-1. Go to Settings > Secrets and variables > Actions in your repository
+1. Go to **Settings** > **Secrets and variables** > **Actions** in your repository
 2. Create a new secret named `FEISHU_WEBHOOK_URL`
 3. Paste your Feishu Webhook URL as the value
 
@@ -143,6 +160,32 @@ Each repository manages its own webhook URL.
 2. Go to Group Settings > Group Chat > Chatbots > Add Robot
 3. Select "Custom Bot" and configure it
 4. Copy the Webhook URL
+
+## Migration Guide
+
+### Migrating from Per-Repository to Organization-level Secret
+
+If you currently have the `FEISHU_WEBHOOK_URL` secret configured in multiple repositories, you can migrate to organization-level secrets for easier management.
+
+**Step-by-step migration:**
+
+1. **Create the organization-level secret** (see Option 1 above)
+2. **Configure access settings** to select which repositories can use the secret
+3. **Verify** that at least one repository's workflow runs successfully
+4. **Optional cleanup**: Remove the `FEISHU_WEBHOOK_URL` secret from individual repositories
+
+**Migration verification checklist:**
+
+- [ ] Organization-level secret `FEISHU_WEBHOOK_URL` has been created
+- [ ] Access settings are configured for the correct repositories
+- [ ] At least one workflow using the organization secret runs successfully
+- [ ] Notification is received in Feishu
+
+**Rollback plan:**
+
+If you encounter any issues, you can easily rollback:
+1. Re-create the `FEISHU_WEBHOOK_URL` secret in individual repositories
+2. No changes to workflow files are needed
 
 ### 3. Reference a Specific Version
 
@@ -218,3 +261,63 @@ MIT
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## FAQ
+
+**Q: Can I use organization-level secrets with personal repositories?**
+
+A: No, organization-level secrets are only available for GitHub organizations. If you're using a personal account, use the per-repository configuration option (Option 2).
+
+**Q: Do I need to modify my workflow files when migrating to organization-level secrets?**
+
+A: No changes are needed. The workflow configuration remains exactly the same. You just need to configure the secret at the organization level instead of in individual repositories.
+
+**Q: What happens if a repository doesn't have access to the organization-level secret?**
+
+A: The workflow will fail with an error indicating that the secret is not available. Make sure to configure the access settings when creating the organization-level secret.
+
+**Q: Can I mix organization-level and per-repository secrets?**
+
+A: Yes, you can use both approaches simultaneously. Some repositories can use the organization-level secret while others manage their own. This is useful during migration.
+
+**Q: How do I update the webhook URL for all repositories?**
+
+A: With organization-level secrets, simply update the secret value in the organization settings. All repositories with access will automatically use the new value.
+
+## Troubleshooting
+
+### Secret not found error
+
+**Symptom**: Workflow fails with error about `FEISHU_WEBHOOK_URL` not being found.
+
+**Solutions**:
+- Verify the secret exists at the organization or repository level
+- For organization secrets: Check access settings to ensure the repository has access
+- Check that the secret name is spelled correctly (case-sensitive)
+
+### Webhook authentication failed
+
+**Symptom**: Workflow runs but notification is not received, or webhook returns authentication error.
+
+**Solutions**:
+- Verify the webhook URL is correct and complete
+- Check that the custom bot in Feishu is still enabled
+- Ensure the webhook hasn't been regenerated or changed in Feishu
+
+### Access denied for organization secret
+
+**Symptom**: Error indicating the repository cannot access the organization-level secret.
+
+**Solutions**:
+- Contact your organization administrator to grant access
+- Check the secret's access settings in organization settings
+- Verify the repository is part of the same organization
+
+### Notification format issues
+
+**Symptom**: Notification is received but formatting is incorrect.
+
+**Solutions**:
+- Verify `msg_type` parameter is set correctly (`text`, `post`, or `interactive`)
+- Ensure `title` is provided when using `post` or `interactive` message types
+- Check that message content follows Feishu's message format requirements
